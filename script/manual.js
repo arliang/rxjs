@@ -47,6 +47,7 @@
     '    padding-right: 5px;',
     '    cursor: pointer;',
     '}',
+	'.github-markdown h3 { z-index: -1; }',
     '.layout-container > header:before {',
     '  display:none;',
     '}',
