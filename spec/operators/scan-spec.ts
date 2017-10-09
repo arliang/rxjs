@@ -1,6 +1,12 @@
-import {expect} from 'chai';
-import * as Rx from '../../dist/cjs/Rx';
-declare const {hot, cold, asDiagram, expectObservable, expectSubscriptions};
+import { expect } from 'chai';
+import * as Rx from '../../dist/package/Rx';
+import marbleTestingSignature = require('../helpers/marble-testing'); // tslint:disable-line:no-require-imports
+
+declare const { asDiagram, type };
+declare const hot: typeof marbleTestingSignature.hot;
+declare const cold: typeof marbleTestingSignature.cold;
+declare const expectObservable: typeof marbleTestingSignature.expectObservable;
+declare const expectSubscriptions: typeof marbleTestingSignature.expectSubscriptions;
 
 const Observable = Rx.Observable;
 
@@ -38,6 +44,26 @@ describe('Observable.prototype.scan', () => {
     };
 
     const source = e1.scan((acc: any, x: string) => [].concat(acc, x), []);
+
+    expectObservable(source).toBe(expected, values);
+    expectSubscriptions(e1.subscriptions).toBe(e1subs);
+  });
+
+  it('should scan with a seed of undefined', () => {
+    const e1 = hot('--a--^--b--c--d--e--f--g--|');
+    const e1subs =      '^                    !';
+    const expected =    '---u--v--w--x--y--z--|';
+
+    const values = {
+      u: 'undefined b',
+      v: 'undefined b c',
+      w: 'undefined b c d',
+      x: 'undefined b c d e',
+      y: 'undefined b c d e f',
+      z: 'undefined b c d e f g'
+    };
+
+    const source = e1.scan((acc: any, x: string) => acc + ' ' + x, undefined);
 
     expectObservable(source).toBe(expected, values);
     expectSubscriptions(e1.subscriptions).toBe(e1subs);
@@ -200,5 +226,34 @@ describe('Observable.prototype.scan', () => {
 
     expectObservable(scan).toBe(expected, values);
     expectSubscriptions(e1.subscriptions).toBe(e1subs);
+  });
+
+  it('should accept array types', () => {
+    type(() => {
+      let a: Rx.Observable<{ a: number; b: string }>;
+      a.scan((acc, value) => acc.concat(value), []);
+    });
+  });
+
+  it('should accept T types', () => {
+    type(() => {
+      let a: Rx.Observable<{ a?: number; b?: string }>;
+      a.scan((acc, value) => {
+        acc.a = value.a;
+        acc.b = value.b;
+        return acc;
+      }, {});
+    });
+  });
+
+  it('should accept R typed reducers', () => {
+    type(() => {
+      let a: Rx.Observable<{ a: number; b: string }>;
+      a.scan<{ a?: number; b?: string }>((acc, value) => {
+        acc.a = value.a;
+        acc.b = value.b;
+        return acc;
+      }, {});
+    });
   });
 });

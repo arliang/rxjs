@@ -1,9 +1,17 @@
-import {expect} from 'chai';
-import * as Rx from '../../dist/cjs/Rx';
-declare const {hot, cold, asDiagram, expectObservable, expectSubscriptions, time, rxTestScheduler};
+import { expect } from 'chai';
+import * as Rx from '../../dist/package/Rx';
+import marbleTestingSignature = require('../helpers/marble-testing'); // tslint:disable-line:no-require-imports
+
+declare const { asDiagram, time, rxTestScheduler };
+declare const type;
+declare const hot: typeof marbleTestingSignature.hot;
+declare const cold: typeof marbleTestingSignature.cold;
+declare const expectObservable: typeof marbleTestingSignature.expectObservable;
+declare const expectSubscriptions: typeof marbleTestingSignature.expectSubscriptions;
 
 const Observable = Rx.Observable;
 const Subject = Rx.Subject;
+const ReplaySubject = Rx.ReplaySubject;
 
 /** @test {multicast} */
 describe('Observable.prototype.multicast', () => {
@@ -34,6 +42,33 @@ describe('Observable.prototype.multicast', () => {
     connectable.connect();
   });
 
+  it('should multicast a ConnectableObservable', (done: MochaDone) => {
+    const expected = [1, 2, 3, 4];
+
+    const source = new Subject<number>();
+    const connectable = source.multicast(new Subject<number>());
+    const replayed = connectable.multicast(new ReplaySubject<number>());
+
+    connectable.connect();
+    replayed.connect();
+
+    source.next(1);
+    source.next(2);
+    source.next(3);
+    source.next(4);
+    source.complete();
+
+    replayed.do({
+      next(x: number) {
+        expect(x).to.equal(expected.shift());
+      },
+      complete() {
+        expect(expected.length).to.equal(0);
+      }
+    })
+    .subscribe(null, done, done);
+  });
+
   it('should accept Subject factory functions', (done: MochaDone) => {
     const expected = [1, 2, 3, 4];
 
@@ -49,17 +84,59 @@ describe('Observable.prototype.multicast', () => {
     connectable.connect();
   });
 
-  it('should accept selectors to factory functions', () => {
+  it('should accept a multicast selector and connect to a hot source for each subscriber', () => {
     const source =      hot('-1-2-3----4-|');
-    const sourceSubs =     ['^           !'];
+    const sourceSubs =     ['^           !',
+                            '    ^       !',
+                            '        ^   !'];
     const multicasted = source.multicast(() => new Subject(),
-      x => x.zip(x, (a, b) => (parseInt(a) + parseInt(b)).toString()));
+      x => x.zip(x, (a: string, b: string) => (parseInt(a) + parseInt(b)).toString()));
     const subscriber1 = hot('a|           ').mergeMapTo(multicasted);
     const expected1   =     '-2-4-6----8-|';
     const subscriber2 = hot('    b|       ').mergeMapTo(multicasted);
     const expected2   =     '    -6----8-|';
     const subscriber3 = hot('        c|   ').mergeMapTo(multicasted);
     const expected3   =     '        --8-|';
+
+    expectObservable(subscriber1).toBe(expected1);
+    expectObservable(subscriber2).toBe(expected2);
+    expectObservable(subscriber3).toBe(expected3);
+    expectSubscriptions(source.subscriptions).toBe(sourceSubs);
+  });
+
+  it('should accept a multicast selector and connect to a cold source for each subscriber', () => {
+    const source =     cold('-1-2-3----4-|');
+    const sourceSubs =     ['^           !',
+                            '    ^           !',
+                            '        ^           !'];
+    const multicasted = source.multicast(() => new Subject(),
+      x => x.zip(x, (a: string, b: string) => (parseInt(a) + parseInt(b)).toString()));
+    const expected1   =     '-2-4-6----8-|';
+    const expected2   =     '    -2-4-6----8-|';
+    const expected3   =     '        -2-4-6----8-|';
+    const subscriber1 = hot('a|           ').mergeMapTo(multicasted);
+    const subscriber2 = hot('    b|       ').mergeMapTo(multicasted);
+    const subscriber3 = hot('        c|   ').mergeMapTo(multicasted);
+
+    expectObservable(subscriber1).toBe(expected1);
+    expectObservable(subscriber2).toBe(expected2);
+    expectObservable(subscriber3).toBe(expected3);
+    expectSubscriptions(source.subscriptions).toBe(sourceSubs);
+  });
+
+  it('should accept a multicast selector and respect the subject\'s messaging semantics', () => {
+    const source =     cold('-1-2-3----4-|');
+    const sourceSubs =     ['^           !',
+                            '    ^           !',
+                            '        ^           !'];
+    const multicasted = source.multicast(() => new ReplaySubject(1),
+      x => x.concat(x.takeLast(1)));
+    const expected1   =     '-1-2-3----4-(4|)';
+    const expected2   =     '    -1-2-3----4-(4|)';
+    const expected3   =     '        -1-2-3----4-(4|)';
+    const subscriber1 = hot('a|           ').mergeMapTo(multicasted);
+    const subscriber2 = hot('    b|       ').mergeMapTo(multicasted);
+    const subscriber3 = hot('        c|   ').mergeMapTo(multicasted);
 
     expectObservable(subscriber1).toBe(expected1);
     expectObservable(subscriber2).toBe(expected2);
@@ -477,7 +554,7 @@ describe('Observable.prototype.multicast', () => {
     connectable.connect();
 
     expect(results1).to.deep.equal([1, 2, 3, 4]);
-    expect(results1).to.deep.equal([1, 2, 3, 4]);
+    expect(results2).to.deep.equal([1, 2, 3, 4]);
     expect(subscriptions).to.equal(1);
     done();
   });
@@ -560,6 +637,29 @@ describe('Observable.prototype.multicast', () => {
           expect(expected.length).to.equal(0);
           done();
         });
+    });
+  });
+
+  describe('typings', () => {
+    type('should infer the type', () => {
+      /* tslint:disable:no-unused-variable */
+      const source = Rx.Observable.of<number>(1, 2, 3);
+      const result: Rx.Observable<number> = source.multicast(() => new Subject<number>());
+      /* tslint:enable:no-unused-variable */
+    });
+
+    type('should infer the type with a selector', () => {
+      /* tslint:disable:no-unused-variable */
+      const source = Rx.Observable.of<number>(1, 2, 3);
+      const result: Rx.Observable<number> = source.multicast(() => new Subject<number>(), s => s.map(x => x));
+      /* tslint:enable:no-unused-variable */
+    });
+
+    type('should infer the type with a type-changing selector', () => {
+      /* tslint:disable:no-unused-variable */
+      const source = Rx.Observable.of<number>(1, 2, 3);
+      const result: Rx.Observable<string> = source.multicast(() => new Subject<number>(), s => s.map(x => x + '!'));
+      /* tslint:enable:no-unused-variable */
     });
   });
 });

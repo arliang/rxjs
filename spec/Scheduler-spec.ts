@@ -1,5 +1,5 @@
-import {expect} from 'chai';
-import * as Rx from '../dist/cjs/Rx';
+import { expect } from 'chai';
+import * as Rx from '../dist/package/Rx';
 
 const Scheduler = Rx.Scheduler;
 
@@ -15,6 +15,21 @@ describe('Scheduler.queue', () => {
         call2 = true;
       });
     });
+    expect(call1).to.be.true;
+    expect(call2).to.be.true;
+  });
+
+  it('should schedule things recursively via this.schedule', () => {
+    let call1 = false;
+    let call2 = false;
+    Scheduler.queue.active = false;
+    Scheduler.queue.schedule(function (state) {
+      call1 = state.call1;
+      call2 = state.call2;
+      if (!call2) {
+        this.schedule({ call1: true, call2: true });
+      }
+    }, 0, { call1: true, call2: false });
     expect(call1).to.be.true;
     expect(call2).to.be.true;
   });

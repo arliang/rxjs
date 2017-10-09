@@ -1,7 +1,7 @@
 ## ES6 via npm
 
 ```none
-npm install rxjs-es
+npm install rxjs
 ```
 
 To import the entire core set of functionality:
@@ -14,20 +14,24 @@ Rx.Observable.of(1,2,3)
 
 To import only what you need by patching (this is useful for size-sensitive bundling):
 
-```js
-import {Observable} from 'rxjs/Observable';
+```js 
+import { Observable} from 'rxjs/Observable';
+import 'rxjs/add/observable/of';
 import 'rxjs/add/operator/map';
 
 Observable.of(1,2,3).map(x => x + '!!!'); // etc
 ```
 
-To import what you need and use it with ES next function bind (best overall method, if possible):
+To import what you need and use it with proposed [bind operator](https://github.com/tc39/proposal-bind-operator):
+
+> Note: This additional syntax requires [transpiler support](http://babeljs.io/docs/plugins/transform-function-bind/) and this syntax may be completely withdrawn from TC39 without notice! Use at your own risk.
 
 ```js
-import {Observable} from 'rxjs/Observable';
-import {map} from 'rxjs/operator/map';
+import { Observable } from 'rxjs/Observable';
+import { of } from 'rxjs/observable/of';
+import { map } from 'rxjs/operator/map';
 
-Observable.of(1,2,3)::map(x => x + '!!!'); // etc
+Observable::of(1,2,3)::map(x => x + '!!!'); // etc
 ```
 
 ## CommonJS via npm
@@ -49,6 +53,7 @@ Import only what you need and patch Observable (this is useful in size-sensitive
 ```js
 var Observable = require('rxjs/Observable').Observable;
 // patch Observable with appropriate methods
+require('rxjs/add/observable/of');
 require('rxjs/add/operator/map');
 
 Observable.of(1,2,3).map(function (x) { return x + '!!!'; }); // etc
@@ -57,10 +62,10 @@ Observable.of(1,2,3).map(function (x) { return x + '!!!'; }); // etc
 Import operators and use them _manually_ you can do the following (this is also useful for bundling):
 
 ```js
-var Observable = require('rxjs/Observable').Observable;
+var of = require('rxjs/observable/of').of;
 var map = require('rxjs/operator/map').map;
 
-map.call(Observable.of(1,2,3), function (x) { return x + '!!!'; });
+map.call(of(1,2,3), function (x) { return x + '!!!'; });
 ```
 
 You can also use the above method to build your own Observable and export it from your own module.
@@ -92,7 +97,11 @@ npm install @reactivex/rxjs@5.0.0-beta.1
 
 ## CDN
 
-For CDN, you can use [npmcdn](https://npmcdn.com). Just replace `version` with the current
+For CDN, you can use [unpkg](https://unpkg.com). Just replace `version` with the current
 version on the link below:
 
-https://npmcdn.com/@reactivex/rxjs@version/dist/global/Rx.umd.js
+For RxJS 5.0.0-beta.1 through beta.11:
+https://unpkg.com/@reactivex/rxjs@version/dist/global/Rx.umd.js
+
+For RxJS 5.0.0-beta.12 and higher:
+https://unpkg.com/@reactivex/rxjs@version/dist/global/Rx.js

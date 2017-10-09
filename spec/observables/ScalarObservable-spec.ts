@@ -1,6 +1,6 @@
-import {expect} from 'chai';
-import * as Rx from '../../dist/cjs/Rx';
-import {ScalarObservable} from '../../dist/cjs/observable/ScalarObservable';
+import { expect } from 'chai';
+import * as Rx from '../../dist/package/Rx';
+import { ScalarObservable } from '../../dist/package/observable/ScalarObservable';
 
 declare const rxTestScheduler: Rx.TestScheduler;
 
@@ -21,7 +21,7 @@ describe('ScalarObservable', () => {
     const s = new ScalarObservable(1, rxTestScheduler);
     const subscriber = new Rx.Subscriber();
     s.subscribe(subscriber);
-    subscriber.isUnsubscribed = true;
+    subscriber.closed = true;
     rxTestScheduler.flush();
   });
 

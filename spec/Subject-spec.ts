@@ -1,7 +1,10 @@
-import {expect} from 'chai';
-import * as Rx from '../dist/cjs/Rx';
+import { expect } from 'chai';
+import * as Rx from '../dist/package/Rx';
+import marbleTestingSignature = require('./helpers/marble-testing'); // tslint:disable-line:no-require-imports
 
-declare const {hot, expectObservable};
+declare const { time };
+declare const hot: typeof marbleTestingSignature.hot;
+declare const expectObservable: typeof marbleTestingSignature.expectObservable;
 
 const Subject = Rx.Subject;
 const Observable = Rx.Observable;
@@ -261,10 +264,11 @@ describe('Subject', () => {
     expect(() => {
       subject.subscribe(
         function (x) { results3.push(x); },
-        function (e) { results3.push('E'); },
-        () => { results3.push('C'); }
+        function (err) {
+          expect(false).to.equal('should not throw error: ' + err.toString());
+        }
       );
-    }).to.throw();
+    }).to.throw(Rx.ObjectUnsubscribedError);
 
     expect(results1).to.deep.equal([1, 2, 3, 4, 5]);
     expect(results2).to.deep.equal([3, 4, 5]);
@@ -315,17 +319,17 @@ describe('Subject', () => {
     let outputComplete = false;
 
     const destination = {
-      isUnsubscribed: false,
+      closed: false,
       next: function (x) {
         nexts.push(x);
       },
       error: function (err) {
         error = err;
-        this.isUnsubscribed = true;
+        this.closed = true;
       },
       complete: () => {
         complete = true;
-        this.isUnsubscribed = true;
+        this.closed = true;
       }
     };
 
@@ -361,17 +365,17 @@ describe('Subject', () => {
     let outputComplete = false;
 
     const destination = {
-      isUnsubscribed: false,
+      closed: false,
       next: function (x) {
         nexts.push(x);
       },
       error: function (err) {
         error = err;
-        this.isUnsubscribed = true;
+        this.closed = true;
       },
       complete: () => {
         complete = true;
-        this.isUnsubscribed = true;
+        this.closed = true;
       }
     };
 
@@ -459,13 +463,14 @@ describe('Subject', () => {
   });
 
   it('should not next after error', () => {
+    const error = new Error('wut?');
     const subject = new Rx.Subject();
     const results = [];
     subject.subscribe(x => results.push(x), (err) => results.push(err));
     subject.next('a');
-    subject.error(new Error('wut?'));
+    subject.error(error);
     subject.next('b');
-    expect(results).to.deep.equal(['a', new Error('wut?')]);
+    expect(results).to.deep.equal(['a', error]);
   });
 
   describe('asObservable', () => {
@@ -523,6 +528,10 @@ describe('Subject', () => {
 });
 
 describe('AnonymousSubject', () => {
+  it('should be exposed', () => {
+    expect(Rx.AnonymousSubject).to.be.a('function');
+  });
+
   it('should not eager', () => {
     let subscribed = false;
 

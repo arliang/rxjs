@@ -36,7 +36,7 @@ var increase = Rx.Observable.fromEvent(increaseButton, 'click')
 var state = increase.scan((state, changeFn) => changeFn(state), {count: 0});
 ```
 
-We can now add a a couple of more observables which will also change the same state store.
+We can now add a couple of more observables which will also change the same state store.
 
 ```js
 var increaseButton = document.querySelector('#increase');
@@ -75,7 +75,7 @@ state.subscribe((state) => {
 var prevState = {};
 state.subscribe((state) => {
   if (state.count !== prevState.count) {
-    document.querySelector('#count').innerHTML = state.count;  
+    document.querySelector('#count').innerHTML = state.count;
   }
   if (state.inputValue !== prevState.inputValue) {
     document.querySelector('#hello').innerHTML = 'Hello ' + state.inputValue;
@@ -132,19 +132,19 @@ class MyComponent extends ObservableComponent {
   }
   componentDidMount() {
     this.messages = messages
-      // Let accumulate our messages in an array
+      // Accumulate our messages in an array
       .scan((messages, message) => [message].concat(messages), [])
       // And render whenever we get a new message
-      .forEach(messages => this.setState({messages: messages}));
+      .subscribe(messages => this.setState({messages: messages}));
   }
   componentWillUnmount() {
-    this.messages.dispose();
+    this.messages.unsubscribe();
   }
   render() {
     return (
       <div>
         <ul>
-          {this.state.messages.map(message => <li>{message.text}>/li>)}
+          {this.state.messages.map(message => <li>{message.text}</li>)}
         </ul>
       </div>
     );

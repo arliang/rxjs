@@ -1,6 +1,12 @@
-import {expect} from 'chai';
-import * as Rx from '../../dist/cjs/Rx';
-declare const {hot, cold, asDiagram, expectObservable, expectSubscriptions};
+import { expect } from 'chai';
+import * as Rx from '../../dist/package/Rx';
+import marbleTestingSignature = require('../helpers/marble-testing'); // tslint:disable-line:no-require-imports
+
+declare const { asDiagram };
+declare const hot: typeof marbleTestingSignature.hot;
+declare const cold: typeof marbleTestingSignature.cold;
+declare const expectObservable: typeof marbleTestingSignature.expectObservable;
+declare const expectSubscriptions: typeof marbleTestingSignature.expectSubscriptions;
 
 const Observable = Rx.Observable;
 
@@ -18,9 +24,12 @@ describe('Observable.prototype.publishReplay', () => {
     published.connect();
   });
 
-  it('should return a ConnectableObservable', () => {
+  it('should return a ConnectableObservable-ish', () => {
     const source = Observable.of(1).publishReplay();
-    expect(source instanceof Rx.ConnectableObservable).to.be.true;
+    expect(typeof (<any> source)._subscribe === 'function').to.be.true;
+    expect(typeof (<any> source).getSubject === 'function').to.be.true;
+    expect(typeof source.connect === 'function').to.be.true;
+    expect(typeof source.refCount === 'function').to.be.true;
   });
 
   it('should do nothing if connect is not called, despite subscriptions', () => {
@@ -281,6 +290,48 @@ describe('Observable.prototype.publishReplay', () => {
     expect(results2).to.deep.equal([3, 4]);
     expect(subscriptions).to.equal(1);
     done();
+  });
+
+  it('should emit replayed values and resubscribe to the source when ' +
+    'reconnected without source completion', () => {
+    const results1 = [];
+    const results2 = [];
+    let subscriptions = 0;
+
+    const source = new Observable((observer: Rx.Observer<number>) => {
+      subscriptions++;
+      observer.next(1);
+      observer.next(2);
+      observer.next(3);
+      observer.next(4);
+      // observer.complete();
+    });
+
+    const connectable = source.publishReplay(2);
+    const subscription1 = connectable.subscribe((x: number) => {
+      results1.push(x);
+    });
+
+    expect(results1).to.deep.equal([]);
+    expect(results2).to.deep.equal([]);
+
+    connectable.connect().unsubscribe();
+    subscription1.unsubscribe();
+
+    expect(results1).to.deep.equal([1, 2, 3, 4]);
+    expect(results2).to.deep.equal([]);
+    expect(subscriptions).to.equal(1);
+
+    const subscription2 = connectable.subscribe((x: number) => {
+      results2.push(x);
+    });
+
+    connectable.connect().unsubscribe();
+    subscription2.unsubscribe();
+
+    expect(results1).to.deep.equal([1, 2, 3, 4]);
+    expect(results2).to.deep.equal([3, 4, 1, 2, 3, 4]);
+    expect(subscriptions).to.equal(2);
   });
 
   it('should emit replayed values plus completed when subscribed after completed', (done: MochaDone) => {

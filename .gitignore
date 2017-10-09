@@ -15,6 +15,7 @@ tmp/
 coverage/
 img/
 spec-js/
+.nyc_output/
 
 # Misc
 npm-debug.log

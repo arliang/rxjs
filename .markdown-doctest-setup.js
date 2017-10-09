@@ -23,7 +23,10 @@ module.exports = {
   globals: {
     document: {
       querySelector: function () {
-        return {addEventListener: function () {}}
+        return {
+          addEventListener: function () {},
+          removeEventListener: function () {}
+        }
       }
     },
     hot: marbleTesting.hot,
@@ -42,7 +45,7 @@ module.exports = {
 
   regexRequire: {
     'rxjs/(.*)': function (_, moduleName) {
-      return require(__dirname + '/dist/cjs/' + moduleName);
+      return require(__dirname + '/dist/package/' + moduleName);
     }
   },
 

@@ -1,6 +1,12 @@
-import {expect} from 'chai';
-import * as Rx from '../../dist/cjs/Rx';
-declare const {hot, cold, asDiagram, expectObservable, expectSubscriptions};
+import { expect } from 'chai';
+import * as Rx from '../../dist/package/Rx';
+import marbleTestingSignature = require('../helpers/marble-testing'); // tslint:disable-line:no-require-imports
+
+declare const { asDiagram };
+declare const hot: typeof marbleTestingSignature.hot;
+declare const cold: typeof marbleTestingSignature.cold;
+declare const expectObservable: typeof marbleTestingSignature.expectObservable;
+declare const expectSubscriptions: typeof marbleTestingSignature.expectSubscriptions;
 
 const Observable = Rx.Observable;
 
@@ -18,10 +24,12 @@ describe('Observable.prototype.publishLast', () => {
     published.connect();
   });
 
-  it('should return a ConnectableObservable', () => {
+  it('should return a ConnectableObservable-ish', () => {
     const source = Observable.of(1).publishLast();
-
-    expect(source instanceof Rx.ConnectableObservable).to.be.true;
+    expect(typeof (<any> source)._subscribe === 'function').to.be.true;
+    expect(typeof (<any> source).getSubject === 'function').to.be.true;
+    expect(typeof source.connect === 'function').to.be.true;
+    expect(typeof source.refCount === 'function').to.be.true;
   });
 
   it('should do nothing if connect is not called, despite subscriptions', () => {
